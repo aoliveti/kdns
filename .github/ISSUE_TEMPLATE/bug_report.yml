@@ -1,0 +1,39 @@
+name: "Bug Report"
+description: "File a bug or unexpected behavior in KDNS"
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please provide detailed information to help reproduce the problem.
+  - type: input
+    id: environment
+    attributes:
+      label: "Environment"
+      description: "Operating system, architecture, and Go version"
+      placeholder: "e.g. Ubuntu 24.04 (linux/amd64), Go 1.27.x"
+    validations:
+      required: true
+  - type: textarea
+    id: flags
+    attributes:
+      label: "KDNS Configuration / Flags"
+      description: "CLI flags or environment variables used to start KDNS"
+      placeholder: "e.g. ./kdns --address=:5353 --mode=standalone"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Steps to Reproduce"
+      description: "Exact steps or curl/dig commands to reproduce the issue"
+      placeholder: "1. Start server with...\n2. Run dig @127.0.0.1 -p 5353 example.com A\n3. Observe error..."
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: "Logs or Query Output"
+      description: "Paste relevant output from `dig`, log lines, or packet captures"
+      render: shell

@@ -1,0 +1,29 @@
+name: "Feature Request / RFC Proposal"
+description: "Suggest an improvement or new RFC standard support"
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature proposals should align with KDNS's goals: high performance, zero heap allocations on hot path, and strong standard compliance.
+  - type: textarea
+    id: problem
+    attributes:
+      label: "Problem / Use Case"
+      description: "What problem does this feature solve?"
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: "Proposed Technical Solution"
+      description: "Detailed description of the proposed feature and architecture"
+    validations:
+      required: true
+  - type: input
+    id: rfc
+    attributes:
+      label: "Relevant RFCs / Standards"
+      description: "Applicable IETF RFC numbers (if any)"
+      placeholder: "e.g. RFC 1035, RFC 8484"
