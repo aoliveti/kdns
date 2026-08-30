@@ -13,6 +13,7 @@
 <p align="center">
   <a href="https://github.com/aoliveti/kdns/releases/latest"><img src="https://img.shields.io/github/v/release/aoliveti/kdns?logo=github&color=blue" alt="Latest Release"></a>
   <a href="https://github.com/aoliveti/kdns/actions/workflows/ci.yml"><img src="https://github.com/aoliveti/kdns/actions/workflows/ci.yml/badge.svg" alt="CI Status"></a>
+  <a href="https://github.com/aoliveti/kdns/actions/workflows/codeql.yml"><img src="https://github.com/aoliveti/kdns/actions/workflows/codeql.yml/badge.svg" alt="CodeQL Analysis"></a>
   <a href="https://pkg.go.dev/github.com/aoliveti/kdns"><img src="https://pkg.go.dev/badge/github.com/aoliveti/kdns.svg" alt="Go Reference"></a>
   <a href="https://hub.docker.com/r/aoliveti/kdns"><img src="https://img.shields.io/docker/v/aoliveti/kdns?label=Docker%20Hub&logo=docker" alt="Docker Hub"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="License"></a>
