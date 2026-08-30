@@ -21,7 +21,7 @@
 ---
 
 > **Note on AI collaboration:**  
-> KDNS was built from scratch as an educational project to explore low-level networking, zero-allocation Go patterns, and distributed state—developed in close pair-programming collaboration with an AI coding agent.
+> KDNS is an educational project built from scratch to explore low-level networking, high-performance Go, and distributed state—developed in pair-programming with an AI agent. If you don't like AI-assisted projects, feel free to skip this repository. Constructive technical feedback and contributions are always welcome; purist gatekeeping is not.
 
 ---
 
