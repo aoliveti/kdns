@@ -1,0 +1,74 @@
+services:
+  kdns-standalone:
+    image: kdns:latest
+    environment:
+      - KDNS_MODE=standalone
+      - KDNS_ADDRESS=:5353
+      - KDNS_HTTP_ADDR=:8080
+      - KDNS_API_TOKEN=standalone-api-secret-1234
+      - KDNS_STORAGE_DIR=/data
+      - KDNS_ZONE_FILE=${KDNS_ZONE_FILE:-}
+      - KDNS_RRL=${KDNS_RRL:-true}
+    ports:
+      - "5355:5353/udp"
+      - "5355:5353/tcp"
+      - "8083:8080"
+      - "8444:8443"
+    volumes:
+      - standalone_data:/data
+      - ../bench:/bench:ro
+
+  kdns-primary:
+    image: kdns:latest
+    environment:
+      - KDNS_MODE=primary
+      - KDNS_ADDRESS=:5353
+      - KDNS_HTTP_ADDR=:8080
+      - KDNS_API_TOKEN=primary-api-secret-12345
+      - KDNS_CLUSTER_ADDR=:8081
+      - KDNS_CLUSTER_TOKEN=cluster-sync-token-secret-1234
+      - KDNS_STORAGE_DIR=/data
+    ports:
+      - "5356:5353/udp"
+      - "5356:5353/tcp"
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - primary_data:/data
+
+  kdns-replica:
+    image: kdns:latest
+    depends_on:
+      - kdns-primary
+    environment:
+      - KDNS_MODE=replica
+      - KDNS_PRIMARY_URL=http://kdns-primary:8081
+      - KDNS_CLUSTER_TOKEN=cluster-sync-token-secret-1234
+      - KDNS_ADDRESS=:5353
+      - KDNS_HTTP_ADDR=:8080
+      - KDNS_API_TOKEN=replica-api-secret-12345
+      - KDNS_STORAGE_DIR=/data
+    ports:
+      - "5354:5353/udp"
+      - "5354:5353/tcp"
+      - "8082:8080"
+    volumes:
+      - replica_data:/data
+
+  e2e-runner:
+    build:
+      context: ../..
+      dockerfile: test/e2e/Dockerfile
+    depends_on:
+      - kdns-standalone
+      - kdns-primary
+      - kdns-replica
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/test/e2e:ro
+      - ../..:/workspace:ro
+
+volumes:
+  standalone_data:
+  primary_data:
+  replica_data:

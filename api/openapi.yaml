@@ -1,0 +1,537 @@
+openapi: 3.0.3
+info:
+  title: KDNS Control Plane API
+  description: |
+    REST Control Plane and Management API specification for KDNS.
+    Provides endpoints for DNS resource record management, cursor pagination, substring search,
+    Kubernetes health probes (liveness & readiness), and Prometheus metrics export.
+    
+    The Control Plane listener runs on port **:8080**.
+  version: 1.0.0
+  license:
+    name: BSD 3-Clause
+    url: https://opensource.org/licenses/BSD-3-Clause
+
+servers:
+  - url: http://localhost:8080
+    description: Control Plane (Zone Management, Health & Telemetry)
+
+tags:
+  - name: Zone Management
+    description: Control plane endpoints for inspecting, adding, modifying, and deleting DNS resource records.
+  - name: Health & Telemetry
+    description: Operational health probes (Kubernetes liveness and readiness) and Prometheus metrics exporter.
+
+paths:
+  # =========================================================================
+  # Health & Telemetry (:8080)
+  # =========================================================================
+  /livez:
+    get:
+      tags:
+        - Health & Telemetry
+      summary: Liveness health probe
+      description: Returns 200 OK indicating the server process is running and not deadlocked.
+      responses:
+        '200':
+          description: Server process is alive.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "ok\n"
+
+  /startupz:
+    get:
+      tags:
+        - Health & Telemetry
+      summary: Startup health probe
+      description: Returns 200 OK indicating the server initialization and storage bootstrap are complete.
+      responses:
+        '200':
+          description: Server initialization is complete.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "ok\n"
+
+  /readyz:
+    get:
+      tags:
+        - Health & Telemetry
+      summary: Readiness health probe
+      description: Returns 200 OK when ready to serve DNS and API traffic. In Replica mode, returns 503 Service Unavailable while performing initial snapshot sync from the Primary.
+      responses:
+        '200':
+          description: Server is ready to receive traffic.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "ok\n"
+        '503':
+          description: Server is syncing initial state and not yet ready for traffic.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "syncing\n"
+
+  /metrics:
+    get:
+      tags:
+        - Health & Telemetry
+      summary: Prometheus metrics
+      description: Exports system and DNS telemetry in Prometheus standard text exposition format (version 0.0.4).
+      responses:
+        '200':
+          description: Prometheus metrics text stream.
+          content:
+            text/plain; version=0.0.4:
+              schema:
+                type: string
+
+  # =========================================================================
+  # Zone Management (:8080)
+  # =========================================================================
+  /v1/records:
+    get:
+      tags:
+        - Zone Management
+      summary: List all domain records (paginated)
+      description: Sequentially traverses domain records in lexicographical order using cursor pagination.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+        - {}
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of domains to return (default 100, max 1000).
+          required: false
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+        - name: cursor
+          in: query
+          description: Seek cursor (domain name) to paginate records strictly after this key.
+          required: false
+          schema:
+            type: string
+            example: "example.com"
+      responses:
+        '200':
+          description: Paginated list of domain records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/records/search:
+    get:
+      tags:
+        - Zone Management
+      summary: Search domain records by substring
+      description: Performs a lock-free substring scan across all domain names in memory.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+        - {}
+      parameters:
+        - name: q
+          in: query
+          description: Search query substring.
+          required: true
+          schema:
+            type: string
+            example: "api"
+        - name: limit
+          in: query
+          description: Maximum number of matching domains to return (default 100, max 1000).
+          required: false
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Matching domain records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Missing query parameter 'q'.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /v1/records/{domain}:
+    get:
+      tags:
+        - Zone Management
+      summary: Get records for a domain
+      description: Returns all resource record sets configured for the specified domain.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+        - {}
+      parameters:
+        - name: domain
+          in: path
+          description: Fully-qualified domain name (FQDN).
+          required: true
+          schema:
+            type: string
+            example: "app.example.com"
+      responses:
+        '200':
+          description: Domain records found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainRecords'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Domain not found in zone.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Zone Management
+      summary: Create or replace domain records
+      description: |
+        Atomically replaces all record sets for the specified domain.
+        In Replica mode, this endpoint returns 403 Forbidden.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+        - {}
+      parameters:
+        - name: domain
+          in: path
+          description: Fully-qualified domain name (FQDN).
+          required: true
+          schema:
+            type: string
+            example: "app.example.com"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertRequest'
+      responses:
+        '200':
+          description: Domain records successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenReplicaError'
+
+    post:
+      tags:
+        - Zone Management
+      summary: Create or replace domain records (alias for PUT)
+      description: Convenience alias for PUT /v1/records/{domain}.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+        - {}
+      parameters:
+        - name: domain
+          in: path
+          description: Fully-qualified domain name (FQDN).
+          required: true
+          schema:
+            type: string
+            example: "app.example.com"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertRequest'
+      responses:
+        '200':
+          description: Domain records successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenReplicaError'
+
+    delete:
+      tags:
+        - Zone Management
+      summary: Delete domain records
+      description: |
+        Completely deletes all resource records associated with the specified domain.
+        In Replica mode, this endpoint returns 403 Forbidden.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+        - {}
+      parameters:
+        - name: domain
+          in: path
+          description: Fully-qualified domain name (FQDN).
+          required: true
+          schema:
+            type: string
+            example: "app.example.com"
+      responses:
+        '200':
+          description: Domain records deleted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenReplicaError'
+
+  /v1/export/zonefile:
+    get:
+      tags:
+        - Zone Management
+      summary: Export database or zone in RFC 1035 master zone file format
+      description: |
+        Streams DNS resource records formatted as an RFC 1035 compliant Master Zone File (BIND format).
+        If the `zone` query parameter is omitted, all zones in the database are exported.
+        If `zone` is specified, only records belonging to that zone are exported.
+        This endpoint is supported on both Primary and Replica nodes.
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+        - {}
+      parameters:
+        - name: zone
+          in: query
+          description: Optional zone apex domain name to filter the export (e.g. `example.com`).
+          required: false
+          schema:
+            type: string
+            example: "example.com"
+      responses:
+        '200':
+          description: RFC 1035 Master Zone File stream.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'inline; filename="example.com.zone"'
+          content:
+            text/dns; charset=utf-8:
+              schema:
+                type: string
+                example: |
+                  $ORIGIN example.com.
+                  $TTL 3600
+
+                  example.com.                  3600    IN      SOA     ns1.example.com. hostmaster.example.com. 2026082701 7200 3600 1209600 300
+                  example.com.                  3600    IN      NS      ns1.example.com.
+                  example.com.                  3600    IN      A       192.0.2.1
+                  www.example.com.              300     IN      A       192.0.2.10
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Requested zone was not found in the database.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "zone not found"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: "Bearer token authentication header (Authorization: Bearer <token>)."
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: "Alternative API key header (X-API-Key: <token>)."
+
+  responses:
+    UnauthorizedError:
+      description: Authentication failed or token missing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "unauthorized"
+
+    ForbiddenReplicaError:
+      description: Operation rejected because the node is running in read-only replica mode.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "control plane is in read-only replica mode"
+
+    BadRequestError:
+      description: Invalid request payload or parameter format.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "invalid domain format"
+
+  schemas:
+    Record:
+      type: object
+      required:
+        - type
+        - ttl
+        - rdata
+      properties:
+        type:
+          type: string
+          description: DNS record type (e.g. A, AAAA, CNAME, TXT, MX, NS, SOA, SRV, CAA, PTR, TLSA, DS, DNSKEY).
+          example: "A"
+        ttl:
+          type: integer
+          description: Time-To-Live in seconds (max 2147483647 per RFC 2181).
+          minimum: 0
+          maximum: 2147483647
+          example: 300
+        rdata:
+          type: array
+          description: Presentation text format values for the record set.
+          items:
+            type: string
+          example:
+            - "192.0.2.1"
+            - "192.0.2.2"
+
+    DomainRecords:
+      type: object
+      required:
+        - domain
+        - records
+      properties:
+        domain:
+          type: string
+          description: Fully-qualified domain name (FQDN).
+          example: "example.com"
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/Record'
+
+    UpsertRequest:
+      type: object
+      required:
+        - records
+      properties:
+        records:
+          type: array
+          description: List of record sets to set for the domain.
+          items:
+            $ref: '#/components/schemas/Record'
+      example:
+        records:
+          - type: "A"
+            ttl: 300
+            rdata:
+              - "192.0.2.100"
+          - type: "TXT"
+            ttl: 300
+            rdata:
+              - "v=spf1 -all"
+
+    ListResponse:
+      type: object
+      required:
+        - domains
+        - has_more
+      properties:
+        next_cursor:
+          type: string
+          description: Cursor token to pass into the next page request.
+          example: "sub.example.com"
+        domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainRecords'
+        has_more:
+          type: boolean
+          description: True if additional pages exist.
+          example: false
+
+    SearchResponse:
+      type: object
+      required:
+        - query
+        - domains
+        - total
+      properties:
+        query:
+          type: string
+          example: "api"
+        total:
+          type: integer
+          example: 1
+        domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainRecords'
+
+    StatusResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: "updated"
+        domain:
+          type: string
+          example: "app.example.com"
+        deleted:
+          type: boolean
+          example: false
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: "invalid record type"
+

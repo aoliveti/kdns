@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test & Lint (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+          cache: true
+
+      - name: Run Tests with Race Detector
+        run: go test -race -count=1 ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.13.1
+
+      - name: Install & Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Test BSD Cross-Compilation
+        run: |
+          GOOS=freebsd GOARCH=amd64 go build -o /dev/null ./cmd/kdns
+          GOOS=freebsd GOARCH=arm64 go build -o /dev/null ./cmd/kdns
+          GOOS=openbsd GOARCH=amd64 go build -o /dev/null ./cmd/kdns
+          GOOS=openbsd GOARCH=arm64 go build -o /dev/null ./cmd/kdns
+          GOOS=netbsd GOARCH=amd64 go build -o /dev/null ./cmd/kdns
+          GOOS=netbsd GOARCH=arm64 go build -o /dev/null ./cmd/kdns
+
+      - name: Build Docker Container
+        run: make docker-build

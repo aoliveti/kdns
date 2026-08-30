@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 200" width="100%" height="100%">
+  <defs>
+    <style>
+      .c1-top   { fill: #A7F3D0; }
+      .c1-left  { fill: #34D399; }
+      .c1-right { fill: #059669; }
+
+      .c2-top   { fill: #FEF08A; }
+      .c2-left  { fill: #FACC15; }
+      .c2-right { fill: #CA8A04; }
+
+      .c3-top   { fill: #FECDD3; }
+      .c3-left  { fill: #FB7185; }
+      .c3-right { fill: #E11D48; }
+
+      .brand-text {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, Helvetica, Arial, sans-serif;
+        font-weight: 800;
+        font-size: 92px;
+        letter-spacing: -3px;
+        fill: #0F172A;
+      }
+    </style>
+  </defs>
+
+  <g transform="translate(10, 5)">
+    <g id="cube-mint">
+      <polygon class="c1-top"   points="140,55  185,81  140,107  95,81" />
+      <polygon class="c1-left"  points="95,81   140,107 140,160  95,134" />
+      <polygon class="c1-right" points="140,107 185,81  185,134 140,160" />
+    </g>
+    <g id="cube-yellow">
+      <polygon class="c2-top"   points="95,81   140,107  95,133  50,107" />
+      <polygon class="c2-left"  points="50,107  95,133  95,186  50,160" />
+      <polygon class="c2-right" points="95,133  140,107 140,160  95,186" />
+    </g>
+    <g id="cube-coral">
+      <polygon class="c3-top"   points="95,28   140,54   95,80   50,54" />
+      <polygon class="c3-left"  points="50,54   95,80   95,133  50,107" />
+      <polygon class="c3-right" points="95,80   140,54  140,107  95,133" />
+    </g>
+  </g>
+
+  <text x="225" y="140" class="brand-text">kdns</text>
+</svg>

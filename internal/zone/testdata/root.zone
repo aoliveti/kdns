@@ -1,0 +1,35 @@
+$TTL 86400
+.                       IN      SOA     a.root-servers.net. nstld.verisign-grs.com. 2026082200 1800 900 604800 86400
+.                       IN      NS      a.root-servers.net.
+.                       IN      NS      b.root-servers.net.
+.                       IN      NS      c.root-servers.net.
+.                       IN      DNSKEY  257 3 8 AwEAAaz/tAm8yTn4MfehVu70ePU6hUku97qPA3928PM+5N0dQTrrcq9hKEAtk0ZaZZWECNW/2a1EBdPJaR9N0zbFDC4=
+.                       IN      DNSKEY  256 3 8 AwEAAc0xf4bpTuL0iSRGOV3AWDVoBkWbIOtUmTfWio526b75ew4sg96FNW58Cc6rrclBQZhAvG7syjw9JKDHuTWABRA=
+
+a.root-servers.net.     IN      A       198.41.0.4
+a.root-servers.net.     IN      AAAA    2001:503:ba3e::2:30
+b.root-servers.net.     IN      A       199.9.14.201
+b.root-servers.net.     IN      AAAA    2001:500:200::b
+c.root-servers.net.     IN      A       192.33.4.12
+c.root-servers.net.     IN      AAAA    2001:500:2::c
+
+; TLD Delegations
+com.                    IN      NS      a.gtld-servers.net.
+com.                    IN      NS      b.gtld-servers.net.
+com.                    IN      DS      19718 13 2 8ACBB0CD28F41250A80A491389424D341522D946
+net.                    IN      NS      a.gtld-servers.net.
+net.                    IN      NS      b.gtld-servers.net.
+net.                    IN      DS      35886 8 2 E48C6B6114DD2FE2CA3C49DE2BD52E4B17B0358E
+org.                    IN      NS      a0.org.afilias-nst.info.
+org.                    IN      DS      26974 8 2 4FFB1832049DA888929D69987B33D379E62908DF
+it.                     IN      NS      a.dns.it.
+it.                     IN      DS      19904 8 2 12102DE2193563914BA45B4A1D84B9EEA6B971B3
+arpa.                   IN      NS      a.root-servers.net.
+arpa.                   IN      DS      41812 8 2 64A7DD8BE419E77F70F03A4C7BE2A47EB444F0FA
+
+a.gtld-servers.net.     IN      A       192.5.6.30
+a.gtld-servers.net.     IN      AAAA    2001:503:a83e::2:30
+b.gtld-servers.net.     IN      A       192.33.14.30
+b.gtld-servers.net.     IN      AAAA    2001:503:231d::2:30
+a.dns.it.               IN      A       194.0.16.1
+a.dns.it.               IN      AAAA    2001:67c:3e0::1

@@ -1,0 +1,101 @@
+# Copyright (c) 2026 Andrea Oliveti All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+version: "2"
+
+run:
+  tests: true
+  modules-download-mode: readonly
+
+output:
+  formats:
+    text:
+      colors: true
+
+issues:
+  max-same-issues: 0
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - copyloopvar
+    - decorder
+    - errcheck
+    - errorlint
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
+    - mirror
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - noctx
+    - nolintlint
+    - perfsprint
+    - predeclared
+    - reassign
+    - revive
+    - sloglint
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+  settings:
+    gocyclo:
+      min-complexity: 30
+    nestif:
+      min-complexity: 5
+    unused:
+      field-writes-are-uses: false
+      post-statements-are-reads: false
+    govet:
+      enable-all: true
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+        - unnamedResult
+    gosec:
+      excludes:
+        - G104
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+        - name: blank-imports
+        - name: context-as-argument
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    sloglint:
+      no-mixed-args: true
+      kv-only: false
+      attr-only: true

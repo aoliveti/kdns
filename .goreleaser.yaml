@@ -1,0 +1,55 @@
+version: 2
+
+project_name: kdns
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: kdns
+    main: ./cmd/kdns
+    binary: kdns
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - freebsd
+      - openbsd
+      - netbsd
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.buildTime={{.Date}}
+
+dockers_v2:
+  - images:
+      - "aoliveti/kdns"
+      - "ghcr.io/aoliveti/kdns"
+    tags:
+      - "{{ .Tag }}"
+      - "latest"
+    dockerfile: build/package/Dockerfile
+    platforms:
+      - "linux/amd64"
+      - "linux/arm64"
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - SECURITY.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256

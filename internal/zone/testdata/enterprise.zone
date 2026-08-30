@@ -1,0 +1,23 @@
+$TTL 3600
+$ORIGIN enterprise.com.
+
+; SOA and Apex records
+@       IN  SOA     ns1.enterprise.com. admin.enterprise.com. (
+                    2026081601 ; Serial
+                    7200       ; Refresh
+                    3600       ; Retry
+                    1209600    ; Expire
+                    3600 )     ; Minimum TTL
+
+@       IN  NS      ns1.enterprise.com.
+@       IN  MX      10 mail.enterprise.com.
+@       IN  CAA     0 issue "letsencrypt.org"
+
+; Hosts and services
+ns1     IN  A       192.0.2.1
+mail    IN  A       192.0.2.51
+www     IN  A       192.0.2.50
+www     IN  TXT     "v=spf1 include:_spf.enterprise.com; ~all"
+
+; SRV record with target
+_sip._tcp IN SRV  0 5 5060 sipserver.enterprise.com.

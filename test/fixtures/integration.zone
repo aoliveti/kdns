@@ -1,0 +1,29 @@
+$TTL 300
+$ORIGIN example.com.
+
+; SOA Record
+@       IN  SOA     ns1.example.com. admin.example.com. (
+                    2026082201 ; Serial
+                    7200       ; Refresh
+                    3600       ; Retry
+                    1209600    ; Expire
+                    300 )      ; Minimum TTL
+
+; Apex Name Servers
+@       IN  NS      ns1.example.com.
+@       IN  NS      ns2.example.com.
+
+; Apex MX & TXT
+@       IN  MX      10 mail.example.com.
+@       IN  TXT     "v=spf1 include:_spf.example.com ~all"
+
+; Host Records
+ns1     IN  A       192.0.2.1
+ns2     IN  A       192.0.2.2
+mail    IN  A       192.0.2.10
+www     IN  A       192.0.2.50
+www     IN  AAAA    2001:db8::50
+app     IN  CNAME   www.example.com.
+
+; Wildcards
+*.wild  IN  A       198.51.100.1

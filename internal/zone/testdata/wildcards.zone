@@ -1,0 +1,13 @@
+$TTL 300
+$ORIGIN wild.example.com.
+
+; Apex configuration
+@       IN  SOA     ns1.wild.example.com. admin.wild.example.com. 2026081601 7200 3600 1209600 3600
+@       IN  NS      ns1.wild.example.com.
+
+; Wildcard records
+*.wild.example.com.     IN  A   192.0.2.100
+sub.*.wild.example.com. IN  A   192.0.2.101
+
+; Explicit exact-match record (takes precedence over wildcard)
+target.wild.example.com. IN A 192.0.2.200

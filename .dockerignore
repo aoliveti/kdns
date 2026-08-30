@@ -1,0 +1,42 @@
+# Version control
+.git/
+.gitignore
+.dockerignore
+
+# IDEs and OS files
+.idea/
+.vscode/
+.DS_Store
+**/DS_Store
+
+# Documentation & Guidelines (preserves Docker layer cache when editing docs)
+docs/
+*.md
+LICENSE
+
+# Deployment & Test artifacts (separate build contexts)
+deployments/
+benchmarks/
+test/
+coverage/
+bin/
+
+# Environment and logs
+.env
+*.log
+*.out
+*.test
+*.coverprofile
+profile.cov
+*.bench
+*.perf
+
+# CI/CD and Linting
+Makefile
+.golangci.yml
+.github/
+.act/
+.goreleaser.yaml
+dist/
+*.tar.gz
+checksums.txt

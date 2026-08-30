@@ -1,0 +1,64 @@
+$ORIGIN example.com.
+$TTL 3600
+
+; --- 1. Apex SOA & NS ---
+@       IN  SOA     ns1.example.com. hostmaster.example.com. (
+                    2026082601 ; Serial
+                    7200       ; Refresh (2h)
+                    3600       ; Retry (1h)
+                    1209600    ; Expire (2w)
+                    300        ; Minimum TTL (RFC 2308)
+)
+@       IN  NS      ns1.example.com.
+@       IN  NS      ns2.example.com.
+
+ns1     IN  A       192.0.2.1
+ns2     IN  A       192.0.2.2
+www     IN  A       192.0.2.10
+api     IN  AAAA    2001:db8::10
+mail    IN  A       192.0.2.25
+@       IN  MX  10  mail.example.com.
+@       IN  TXT     "v=spf1 include:_spf.example.com ~all"
+
+; --- 2. Deep Subdomain Hierarchy (10 Radix Tree Label Levels) ---
+l10.l9.l8.l7.l6.l5.l4.l3.l2.l1      IN  A       192.0.2.10
+deep.branch.a.b.c.d.e.f             IN  TXT     "deep branch text verification"
+
+; --- 3. Max Label Length (63 bytes) ---
+label-63-bytes-abcdefghijklmnopqrstuvwxyz0123456789abcdefghijkl  IN A 192.0.2.63
+
+; --- 4. Wildcard Matching & Precedence (RFC 4592) ---
+*.wildcard                          IN  A       192.0.2.200
+*.wildcard                          IN  TXT     "wildcard match"
+explicit.wildcard                   IN  A       192.0.2.201
+*.sub.wildcard                      IN  A       192.0.2.202
+
+; --- 5. Multi-RR RRSets (Buffer Packing & Compression Table) ---
+multi-a                             IN  A       192.0.2.101
+multi-a                             IN  A       192.0.2.102
+multi-a                             IN  A       192.0.2.103
+multi-a                             IN  A       192.0.2.104
+multi-a                             IN  A       192.0.2.105
+multi-a                             IN  A       192.0.2.106
+multi-a                             IN  A       192.0.2.107
+multi-a                             IN  A       192.0.2.108
+
+; --- 6. Large Multiline TXT (250+ bytes) ---
+large-txt                           IN  TXT     "v=spf1 ip4:192.0.2.0/24 ip4:198.51.100.0/24 ip6:2001:db8::/32 include:_spf.google.com include:_spf.salesforce.com include:servers.mcsv.net include:mailgun.org include:sendgrid.net -all"
+
+; --- 7. CNAME Aliasing ---
+cdn                                 IN  CNAME   www.example.com.
+alias                               IN  CNAME   api.example.com.
+
+; --- 8. Zone Cuts & Delegations (RFC 1034 §4.3.2) ---
+delegated                           IN  NS      ns1.delegated.example.com.
+ns1.delegated                       IN  A       192.0.2.150
+
+; --- 9. Service, Policy & Security Records ---
+_sip._tcp                           IN  SRV     10 60 5060 sip.example.com.
+sip                                 IN  A       192.0.2.50
+@                                   IN  CAA     0 issue "letsencrypt.org"
+1.2.0.192.in-addr.arpa.             IN  PTR     example.com.
+@                                   IN  DNSKEY  256 3 13 oJ6JW4VsoZ+SQnSZ4EpS45yvhPsdETNmxqHA105CKnKYhxCEYBgPpKnLgpd34uOEjtMm2bstGvaWn2i8uewpmpAp3TmPtz511985DZ1627skdksk
+delegated                           IN  DS      2371 13 2 2BB1832A01124B9F938D52AB2CE59E5C20A2E30B399DA98332FD0A02416042D2
+@                                   IN  ZONEMD  2026082601 1 1 38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b
