@@ -4,10 +4,18 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
 
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 5
+    groups:
+      go-dependencies:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
