@@ -2,6 +2,8 @@
 
 KDNS uses a lightweight **Primary / replica (active / read-only)** replication model designed for fast failover and multi-datacenter deployment.
 
+A formal **OpenAPI 3.0 specification** describing the cluster endpoints (`/v1/cluster/stream`, `/v1/cluster/snapshot`) is available in [`api/openapi.yaml`](../api/openapi.yaml).
+
 ```
 +-------------------------------------------------------------+
 |                      PRIMARY NODE                           |

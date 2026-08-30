@@ -1,67 +1,109 @@
 openapi: 3.0.3
 info:
-  title: KDNS Control Plane API
+  title: KDNS Unified API Specification
   description: |
-    REST Control Plane and Management API specification for KDNS.
-    Provides endpoints for DNS resource record management, cursor pagination, substring search,
-    Kubernetes health probes (liveness & readiness), and Prometheus metrics export.
-    
-    The Control Plane listener runs on port **:8080**.
+    Formal OpenAPI 3.0.3 specification for the KDNS Authoritative DNS Server.
+    Covers all three network planes:
+    - **Control Plane (`:8080`)**: Zone and record management, cursor pagination, substring search, BIND export, Kubernetes probes, and Prometheus metrics.
+    - **Data Plane (`:8443`)**: RFC 8484 DNS-over-HTTPS (`/dns-query`) and dedicated DoH listener probes.
+    - **Cluster Plane (`:8081`)**: High Availability Write-Ahead Log (WAL) streaming and snapshot replication.
   version: 1.0.0
   license:
     name: BSD 3-Clause
     url: https://opensource.org/licenses/BSD-3-Clause
 
 servers:
-  - url: http://localhost:8080
-    description: Control Plane (Zone Management, Health & Telemetry)
+  - url: http://127.0.0.1:8080
+    description: Control Plane (Management, Probes & Metrics)
+  - url: https://127.0.0.1:8443
+    description: Data Plane (RFC 8484 DNS-over-HTTPS)
+  - url: http://127.0.0.1:8081
+    description: Cluster Plane (HA Streaming & Snapshot Replication)
 
 tags:
   - name: Zone Management
-    description: Control plane endpoints for inspecting, adding, modifying, and deleting DNS resource records.
+    description: Endpoints for inspecting, adding, modifying, searching, and deleting DNS resource records on port :8080.
+  - name: DNS over HTTPS
+    description: RFC 8484 Web Standard binary wire DNS query resolution on dedicated port :8443.
+  - name: Cluster Replication
+    description: High Availability Primary/Replica WAL streaming and snapshot synchronization on port :8081.
   - name: Health & Telemetry
-    description: Operational health probes (Kubernetes liveness and readiness) and Prometheus metrics exporter.
+    description: Operational health probes (Kubernetes liveness, startup, and readiness) and Prometheus metrics exporter.
 
 paths:
   # =========================================================================
-  # Health & Telemetry (:8080)
+  # Control Plane: Health & Telemetry (:8080)
   # =========================================================================
   /livez:
     get:
+      operationId: getLivenessProbe
       tags:
         - Health & Telemetry
-      summary: Liveness health probe
-      description: Returns 200 OK indicating the server process is running and not deadlocked.
+      summary: Control plane liveness probe
+      description: Returns 200 OK indicating the KDNS process is active and not deadlocked.
+      security: []
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
+        - url: https://127.0.0.1:8443
+          description: DoH Data Plane listener
       responses:
         '200':
-          description: Server process is alive.
+          description: Process is alive and healthy.
           content:
             text/plain:
               schema:
                 type: string
                 example: "ok\n"
+        '405':
+          $ref: '#/components/responses/MethodNotAllowedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /startupz:
     get:
+      operationId: getStartupProbe
       tags:
         - Health & Telemetry
-      summary: Startup health probe
-      description: Returns 200 OK indicating the server initialization and storage bootstrap are complete.
+      summary: Control plane startup probe
+      description: Returns 200 OK indicating that server initialization, zone loading, and storage bootstrap have finished.
+      security: []
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
+        - url: https://127.0.0.1:8443
+          description: DoH Data Plane listener
       responses:
         '200':
-          description: Server initialization is complete.
+          description: Server startup is complete.
           content:
             text/plain:
               schema:
                 type: string
                 example: "ok\n"
+        '405':
+          $ref: '#/components/responses/MethodNotAllowedError'
+        '503':
+          description: Server is still initializing storage state.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "initializing\n"
 
   /readyz:
     get:
+      operationId: getReadinessProbe
       tags:
         - Health & Telemetry
-      summary: Readiness health probe
-      description: Returns 200 OK when ready to serve DNS and API traffic. In Replica mode, returns 503 Service Unavailable while performing initial snapshot sync from the Primary.
+      summary: Control plane readiness probe
+      description: Returns 200 OK when ready to serve DNS and API traffic. In Replica mode, returns 503 Service Unavailable until the first snapshot sync completes.
+      security: []
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
+        - url: https://127.0.0.1:8443
+          description: DoH Data Plane listener
       responses:
         '200':
           description: Server is ready to receive traffic.
@@ -70,6 +112,8 @@ paths:
               schema:
                 type: string
                 example: "ok\n"
+        '405':
+          $ref: '#/components/responses/MethodNotAllowedError'
         '503':
           description: Server is syncing initial state and not yet ready for traffic.
           content:
@@ -80,27 +124,40 @@ paths:
 
   /metrics:
     get:
+      operationId: getPrometheusMetrics
       tags:
         - Health & Telemetry
-      summary: Prometheus metrics
-      description: Exports system and DNS telemetry in Prometheus standard text exposition format (version 0.0.4).
+      summary: Prometheus metrics endpoint
+      description: Exports runtime, query, transport, and storage telemetry in standard Prometheus text format (version 0.0.4).
+      security: []
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
       responses:
         '200':
-          description: Prometheus metrics text stream.
+          description: Prometheus metrics exposition stream.
           content:
             text/plain; version=0.0.4:
               schema:
                 type: string
+        '405':
+          $ref: '#/components/responses/MethodNotAllowedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   # =========================================================================
-  # Zone Management (:8080)
+  # Control Plane: Zone & Record Management (:8080)
   # =========================================================================
   /v1/records:
     get:
+      operationId: listRecords
       tags:
         - Zone Management
       summary: List all domain records (paginated)
-      description: Sequentially traverses domain records in lexicographical order using cursor pagination.
+      description: Sequentially traverses domain records in lexicographical order using seek cursor pagination.
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -129,15 +186,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
   /v1/records/search:
     get:
+      operationId: searchRecords
       tags:
         - Zone Management
       summary: Search domain records by substring
-      description: Performs a lock-free substring scan across all domain names in memory.
+      description: Performs a lock-free substring scan across all domain names hosted in memory.
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -165,20 +228,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/SearchResponse'
         '400':
-          description: Missing query parameter 'q'.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
 
   /v1/records/{domain}:
     get:
+      operationId: getDomainRecords
       tags:
         - Zone Management
       summary: Get records for a domain
-      description: Returns all resource record sets configured for the specified domain.
+      description: Returns all resource record sets configured for the specified domain name.
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -203,19 +266,19 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Domain not found in zone.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/NotFoundError'
 
     put:
+      operationId: putDomainRecords
       tags:
         - Zone Management
       summary: Create or replace domain records
       description: |
         Atomically replaces all record sets for the specified domain.
         In Replica mode, this endpoint returns 403 Forbidden.
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -249,10 +312,14 @@ paths:
           $ref: '#/components/responses/ForbiddenReplicaError'
 
     post:
+      operationId: postDomainRecords
       tags:
         - Zone Management
       summary: Create or replace domain records (alias for PUT)
       description: Convenience alias for PUT /v1/records/{domain}.
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -286,12 +353,16 @@ paths:
           $ref: '#/components/responses/ForbiddenReplicaError'
 
     delete:
+      operationId: deleteDomainRecords
       tags:
         - Zone Management
       summary: Delete domain records
       description: |
         Completely deletes all resource records associated with the specified domain.
         In Replica mode, this endpoint returns 403 Forbidden.
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -320,6 +391,7 @@ paths:
 
   /v1/export/zonefile:
     get:
+      operationId: exportZoneFile
       tags:
         - Zone Management
       summary: Export database or zone in RFC 1035 master zone file format
@@ -328,6 +400,9 @@ paths:
         If the `zone` query parameter is omitted, all zones in the database are exported.
         If `zone` is specified, only records belonging to that zone are exported.
         This endpoint is supported on both Primary and Replica nodes.
+      servers:
+        - url: http://127.0.0.1:8080
+          description: Control Plane listener
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -360,28 +435,214 @@ paths:
                   example.com.                  3600    IN      NS      ns1.example.com.
                   example.com.                  3600    IN      A       192.0.2.1
                   www.example.com.              300     IN      A       192.0.2.10
+        '400':
+          $ref: '#/components/responses/BadRequestError'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '404':
-          description: Requested zone was not found in the database.
+          $ref: '#/components/responses/NotFoundError'
+
+  # =========================================================================
+  # Data Plane: DNS over HTTPS (DoH RFC 8484 on :8443)
+  # =========================================================================
+  /dns-query:
+    get:
+      operationId: dohQueryGet
+      tags:
+        - DNS over HTTPS
+      summary: DoH query via GET (RFC 8484 §4.1.1)
+      description: Executes a DNS query with the binary wire message encoded in the `dns` query parameter using base64url without padding.
+      servers:
+        - url: https://127.0.0.1:8443
+          description: DoH Data Plane listener
+      security: []
+      parameters:
+        - name: dns
+          in: query
+          description: Base64url-encoded binary DNS query packet.
+          required: true
+          schema:
+            type: string
+            example: "AAABAAABAAAAAAAAB3d3dwdleGFtcGxlA2NvbQAAAQAB"
+      responses:
+        '200':
+          description: DNS binary wire response packet.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "max-age=300"
+              description: Dynamic cache control header matching minimum record TTL.
+            Content-Type:
+              schema:
+                type: string
+                example: "application/dns-message"
+          content:
+            application/dns-message:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '405':
+          description: Method not allowed.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                error: "zone not found"
+
+    post:
+      operationId: dohQueryPost
+      tags:
+        - DNS over HTTPS
+      summary: DoH query via POST (RFC 8484 §4.1.2)
+      description: Executes a DNS query with the raw binary wire packet in the HTTP request body.
+      servers:
+        - url: https://127.0.0.1:8443
+          description: DoH Data Plane listener
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/dns-message:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: DNS binary wire response packet.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "max-age=300"
+              description: Dynamic cache control header matching minimum record TTL.
+            Content-Type:
+              schema:
+                type: string
+                example: "application/dns-message"
+          content:
+            application/dns-message:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '415':
+          description: Unsupported media type (Content-Type must be application/dns-message).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # =========================================================================
+  # Cluster Plane: High Availability Replication (:8081)
+  # =========================================================================
+  /v1/cluster/snapshot:
+    get:
+      operationId: getClusterSnapshot
+      tags:
+        - Cluster Replication
+      summary: Download complete baseline state snapshot
+      description: |
+        Streams the raw compressed `state.snap` file with its SHA-256 / CRC32 checksum in response headers.
+        Used by replicas for initial synchronization and full state resync after compaction.
+      servers:
+        - url: http://127.0.0.1:8081
+          description: Cluster HA listener
+      security:
+        - ClusterTokenAuth: []
+      responses:
+        '200':
+          description: Raw Deflate compressed state snapshot stream.
+          headers:
+            X-Snapshot-Checksum:
+              schema:
+                type: string
+                example: "a1b2c3d4"
+              description: CRC32-IEEE checksum of the snapshot file.
+            Content-Type:
+              schema:
+                type: string
+                example: "application/octet-stream"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /v1/cluster/stream:
+    get:
+      operationId: getClusterStream
+      tags:
+        - Cluster Replication
+      summary: Persistent WAL mutation stream (HTTP chunked)
+      description: |
+        Opens a continuous HTTP/1.1 chunked stream tailing `mutations.wal` from the specified byte offset.
+        Replicas ingest mutations in real time to disk and in-memory radix tree simultaneously.
+      servers:
+        - url: http://127.0.0.1:8081
+          description: Cluster HA listener
+      security:
+        - ClusterTokenAuth: []
+      parameters:
+        - name: offset
+          in: query
+          description: Byte offset in the WAL file to resume streaming from (default 0).
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            example: 1048576
+      responses:
+        '200':
+          description: Continuous chunked binary WAL stream.
+          headers:
+            X-Cluster-Generation:
+              schema:
+                type: integer
+                example: 1
+              description: Compaction generation counter on the Primary Hub.
+            Content-Type:
+              schema:
+                type: string
+                example: "application/octet-stream"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '416':
+          description: Offset beyond WAL boundary (compaction occurred, replica must resync snapshot).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
-      description: "Bearer token authentication header (Authorization: Bearer <token>)."
+      description: "Bearer token authentication header (Authorization: Bearer <API_TOKEN>)."
     ApiKeyAuth:
       type: apiKey
       in: header
       name: X-API-Key
-      description: "Alternative API key header (X-API-Key: <token>)."
+      description: "Alternative API key header (X-API-Key: <API_TOKEN>)."
+    ClusterTokenAuth:
+      type: http
+      scheme: bearer
+      description: "Cluster authentication token (Authorization: Bearer <CLUSTER_TOKEN>)."
 
   responses:
     UnauthorizedError:
@@ -403,13 +664,40 @@ components:
             error: "control plane is in read-only replica mode"
 
     BadRequestError:
-      description: Invalid request payload or parameter format.
+      description: Invalid request payload, malformed DNS packet, or parameter error.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error: "invalid domain format"
+            error: "invalid request payload"
+
+    NotFoundError:
+      description: Requested domain or zone was not found in the database.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "domain not found"
+
+    MethodNotAllowedError:
+      description: HTTP method not allowed on this endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "method not allowed"
+
+    InternalServerError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "internal server error"
 
   schemas:
     Record:
@@ -421,7 +709,7 @@ components:
       properties:
         type:
           type: string
-          description: DNS record type (e.g. A, AAAA, CNAME, TXT, MX, NS, SOA, SRV, CAA, PTR, TLSA, DS, DNSKEY).
+          description: DNS record type (e.g. A, AAAA, CNAME, TXT, MX, NS, SOA, SRV, CAA, PTR, TLSA, DS, DNSKEY, NSEC).
           example: "A"
         ttl:
           type: integer
@@ -534,4 +822,3 @@ components:
         error:
           type: string
           example: "invalid record type"
-

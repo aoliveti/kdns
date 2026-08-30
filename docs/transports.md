@@ -26,7 +26,7 @@ KDNS supports standard UDP/TCP transports as well as encrypted DoT/DoH and netwo
 
 ## 2. DNS-over-HTTPS (DoH RFC 8484)
 
-The DoH server runs on a dedicated listener (`:8443`), separated from the management API:
+The DoH server runs on a dedicated listener (`:8443`), separated from the management API (formal contract defined in [`api/openapi.yaml`](../api/openapi.yaml)):
 
 - **POST queries:** Accepts `application/dns-message` in the request body.
 - **GET queries:** Accepts base64url encoded queries (`?dns=<base64url>`).

@@ -207,7 +207,7 @@ Detailed architectural deep dives, implementation guides, and API contracts are 
 | :--- | :--- | :--- |
 | **[Architecture & Design](docs/architecture.md)** | System Design | CQRS concurrency model, physical port isolation (`:5353`, `:853`, `:8443`, `:8080`, `:8081`), zero-allocation data plane pipeline, POSIX signal handling (`SIGHUP`/`SIGTERM`). |
 | **[REST API Reference](docs/api-reference.md)** | Control Plane | Endpoints (`/v1/records`, `/search`), streaming zone file export (`/v1/export/zonefile`), Kubernetes probes (`/livez`, `/readyz`, `/startupz`), Prometheus `/metrics`. |
-| **[OpenAPI 3.0 Spec](api/openapi.yaml)** | API Contracts | Formal OpenAPI 3.0 specification for management and cluster replication endpoints. |
+| **[OpenAPI 3.0 Spec](api/openapi.yaml)** | API Contracts | Formal OpenAPI 3.0 specification covering Control Plane (`:8080`), DoH Data Plane (`:8443`), and Cluster Replication (`:8081`). |
 | **[Clustering & HA](docs/clustering-ha.md)** | High Availability | Primary / replica asynchronous WAL streaming (`:8081`), real-time dual disk/memory ingestion, safe atomic state replacement on compaction, read-only replica mode. |
 | **[Storage & WAL Internals](docs/storage-and-wal.md)** | Persistence | Group-commit write batching, big-endian binary framing, Deflate compressed snapshots (`state.snap`, -94%), atomic compaction guardrails. |
 | **[Radix Tree Implementation](docs/radix-tree.md)** | Routing Engine | Reverse-label domain hierarchy, Copy-on-Write concurrency (100% lock-free reads), RFC 4592 wildcard synthesis, ENT suppression, CNAME transparency. |
