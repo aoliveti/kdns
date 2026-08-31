@@ -206,7 +206,7 @@ Detailed architectural deep dives, implementation guides, and API contracts are 
 
 | Guide | Subsystem | Topics Covered |
 | :--- | :--- | :--- |
-| **[Configuration & Flags](docs/configuration.md)** | Operations | Complete reference for all 28 CLI flags and environment variables, precedence rules, and production deployment recipes. |
+| **[Configuration & Flags](docs/configuration.md)** | Operations | Complete reference for command-line flags and environment variables, precedence rules, cryptographic algorithm support, and deployment recipes. |
 | **[Architecture & Design](docs/architecture.md)** | System Design | CQRS concurrency model, physical port isolation (`:5353`, `:853`, `:8443`, `:8080`, `:8081`), zero-allocation data plane pipeline, POSIX signal handling (`SIGHUP`/`SIGTERM`). |
 | **[REST API Reference](docs/api-reference.md)** | Control Plane | Endpoints (`/v1/records`, `/search`), streaming zone file export (`/v1/export/zonefile`), Kubernetes probes (`/livez`, `/readyz`, `/startupz`), Prometheus `/metrics`. |
 | **[OpenAPI 3.0 Spec](api/openapi.yaml)** | API Contracts | Formal OpenAPI 3.0 specification covering Control Plane (`:8080`), DoH Data Plane (`:8443`), and Cluster Replication (`:8081`). |

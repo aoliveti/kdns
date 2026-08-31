@@ -4,7 +4,7 @@ KDNS is configured via command-line flags or environment variables. CLI flags ta
 
 ---
 
-## 1. Complete options reference
+## 1. Options reference
 
 ### Network and transports
 
@@ -59,9 +59,9 @@ KDNS is configured via command-line flags or environment variables. CLI flags ta
 
 | CLI flag | Environment variable | Type | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `--tsig-keys` | `KDNS_TSIG_KEYS` | `string` | `""` | Comma-separated TSIG keys for RFC 2136 dynamic DNS updates (format: `name:algo:secret` or `name:secret`). |
+| `--tsig-keys` | `KDNS_TSIG_KEYS` | `string` | `""` | Comma-separated TSIG keys for RFC 2136 dynamic updates (syntax: `name:algo:secret` or `name:secret`). |
 | `--dnssec` | `KDNS_DNSSEC` | `bool` | `false` | Enable on-the-fly DNSSEC signing and dynamic NSEC authenticated denial proofs. |
-| `--dnssec-keys` | `KDNS_DNSSEC_KEYS` | `string` | `""` | Comma-separated DNSSEC signing keys per zone (format: `example.com:13,example.org:15` where 13=ECDSA-P256, 15=Ed25519). |
+| `--dnssec-keys` | `KDNS_DNSSEC_KEYS` | `string` | `""` | Comma-separated DNSSEC signing keys per zone (syntax: `zone:algo`, e.g. `example.com:13,example.org:15`). |
 
 ---
 
@@ -88,7 +88,46 @@ KDNS is configured via command-line flags or environment variables. CLI flags ta
 
 ---
 
-## 2. Common configuration recipes
+## 2. Cryptographic algorithm specifications
+
+### TSIG HMAC algorithms (RFC 2845 & RFC 8945)
+
+TSIG keys are specified using `--tsig-keys` or `KDNS_TSIG_KEYS` with the syntax:
+`name:algorithm:secret` or `name:secret` (defaults to `hmac-sha256`).
+
+| Identifier | Specification | Key length | Status | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `hmac-sha256` | RFC 4635 / RFC 8945 | 256 bits | **Recommended** | Standard default algorithm for dynamic DNS updates. |
+| `hmac-sha512` | RFC 4635 / RFC 8945 | 512 bits | Supported | High-security HMAC authentication. |
+| `hmac-sha1` | RFC 2845 | 160 bits | Supported | Maintained for legacy DNS client compatibility. |
+| `hmac-md5` | RFC 2845 | 128 bits | Supported | Maintained for legacy BIND / RFC 2845 compatibility. |
+
+**Example configuration:**
+```bash
+--tsig-keys="dhcp-updater:hmac-sha256:c2VjcmV0S2V5MTIzNA==,legacy-client:hmac-md5:b2xkU2VjcmV0NTY3OA=="
+```
+
+---
+
+### DNSSEC signing algorithms (RFC 4034, RFC 6605, RFC 8080)
+
+Zone signing keys are specified using `--dnssec-keys` or `KDNS_DNSSEC_KEYS` with the syntax:
+`zone:algorithm` (e.g. `example.com:13,example.org:15`). If the algorithm code is omitted, it defaults to `13`.
+
+| Algorithm code | Cryptographic suite | Specification | Status | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| `13` | **ECDSA Curve P-256 with SHA-256** | RFC 6605 | **Recommended** | Fast signing, short signatures (64 bytes), universal resolver support. |
+| `15` | **Ed25519 (Edwards-curve DSA)** | RFC 8080 | Supported | Ultra-high performance modern elliptic curve cryptography. |
+
+**Example configuration:**
+```bash
+--dnssec=true \
+--dnssec-keys="example.com:13,secure.internal:15"
+```
+
+---
+
+## 3. Common configuration recipes
 
 ### Standalone server with persistent storage
 
