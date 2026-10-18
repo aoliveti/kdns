@@ -323,7 +323,8 @@ func TestStore_LeakAfterClose(t *testing.T) {
 	go func() { done <- s.Upsert("example.com", dns.RRSets{}) }()
 
 	select {
-	case <-done: // Success or immediate error
+	case err := <-done:
+		require.ErrorIs(t, err, ErrClosed)
 	case <-time.After(500 * time.Millisecond):
 		t.Fatal("goroutine leaked due to Upsert blocking after Close")
 	}
